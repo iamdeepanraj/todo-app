@@ -1,65 +1,118 @@
-import Image from "next/image";
+"use client";
+
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { authClient, signOut } from "@/lib/auth-client";
+import axios from "axios";
+import { PlusIcon, TrashIcon } from "lucide-react";
+import { useEffect, useState } from "react";
+
+interface Todo {
+  id: number;
+  title: string;
+  completed: boolean;
+}
 
 export default function Home() {
+  const [todos, setTodos] = useState<Todo[]>([]);
+  const [input, setInput] = useState<string>('');
+  const [isCompleted, setIsCompleted] = useState<boolean>(false);
+  const { data: session } = authClient.useSession()
+  console.log("Session: ", session)
+  console.log("Input: ", input);
+  console.log("Todos: ", todos);
+
+  useEffect(() => {
+    if (session?.user?.id) {
+      fetchTodo();
+    }
+  }, [session?.user?.id]);
+
+  async function fetchTodo() {
+    const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/todos/${session?.user?.id}`);
+    setTodos(response.data);
+  }
+  
+  async function addTodo() {
+    await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/todos`, {
+      title: input,
+      completed: false,
+    });
+    setInput('');
+    fetchTodo();
+  }
+
+  async function handleToggle(id: number) {
+    const todo = todos.find(todo => todo.id === id);
+    if (!todo) return;
+    const response = await axios.put(`${process.env.NEXT_PUBLIC_API_URL}/todos/${id}`, {
+      completed: !todo.completed,
+    });
+    fetchTodo();
+    setTodos(prevTodos => prevTodos.map(todo => {
+      if (todo.id === id) {
+        return { ...todo, completed: !todo.completed };
+      }
+      return todo;
+    }));
+  }
+
+  function handleDelete(id: number) {
+    const response = axios.delete(`${process.env.NEXT_PUBLIC_API_URL}/todos/${id}`);
+    fetchTodo();
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <>
+    <header>
+      <div className="flex items-center justify-between p-4 border-b border-gray-200">
+        <h1 className="text-xl font-bold">Todo App</h1>
+        <div className="flex gap-4 items-center">
+          <div className="text-sm font-medium">{session?.user?.name}</div>
+        <Avatar>
+          {session?.user?.image && (
+            <AvatarImage src={session.user.image} referrerPolicy="no-referrer" alt={session.user.name} />
+          )}
+          <AvatarFallback>{session?.user?.name?.charAt(0) || "U"}</AvatarFallback>
+          </Avatar>
+        <Button variant="outline" type="button" onClick={async () => await signOut()}>
+          Sign out
+        </Button>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </div>
+    </header>
+      <div className="flex flex-col items-center h-screen pt-10 gap-10 w-full max-w-md mx-auto">
+        
+        <form onSubmit={(e) => e.preventDefault()} className="w-full max-w-md">
+        <div className="flex items-center gap-4 w-full max-w-md">
+          <Input placeholder="Add a new todo" className="h-12 rounded-full" value={input} onChange={(e) => setInput(e.target.value)} />
+          <Button className="h-12 rounded-full" onClick={addTodo}>
+            <PlusIcon />
+            Add Todo
+          </Button>
         </div>
-      </main>
-    </div>
+        <Separator className="my-8"/>
+        <h3 className="text-2xl font-bold my-8 ">List of Todos</h3>
+        <div className="flex flex-col gap-4 w-full max-w-md mx-auto">
+          {
+            todos.map((todo, index) => (
+              <div key={index} className="flex items-center gap-4">
+            <Checkbox checked={todo.completed} onCheckedChange={() => handleToggle(todo.id)}/>
+            <p className={`flex-1 border-2 border-gray-200 p-2 rounded-md ${todo.completed ? 'line-through text-gray-500' : ''}`}>
+              {todo.title}
+            </p>
+            <Button variant="destructive" size="icon" disabled={todo.completed} onClick={() => handleDelete(todo.id)}>
+              <TrashIcon />
+            </Button>
+          </div>
+            ))
+          }
+        </div>
+        </form>
+      </div>
+    </>
   );
 }
