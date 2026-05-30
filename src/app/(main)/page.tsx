@@ -1,11 +1,10 @@
 "use client";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { authClient, signOut } from "@/lib/auth-client";
+import { authClient } from "@/lib/auth-client";
 import axios from "axios";
 import { PlusIcon, TrashIcon } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -21,9 +20,6 @@ export default function Home() {
   const [input, setInput] = useState<string>('');
   const [isCompleted, setIsCompleted] = useState<boolean>(false);
   const { data: session } = authClient.useSession()
-  console.log("Session: ", session)
-  console.log("Input: ", input);
-  console.log("Todos: ", todos);
 
   useEffect(() => {
     if (session?.user?.id) {
@@ -67,23 +63,7 @@ export default function Home() {
 
   return (
     <>
-    <header>
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
-        <h1 className="text-xl font-bold">Todo App</h1>
-        <div className="flex gap-4 items-center">
-          <div className="text-sm font-medium">{session?.user?.name}</div>
-        <Avatar>
-          {session?.user?.image && (
-            <AvatarImage src={session.user.image} referrerPolicy="no-referrer" alt={session.user.name} />
-          )}
-          <AvatarFallback>{session?.user?.name?.charAt(0) || "U"}</AvatarFallback>
-          </Avatar>
-        <Button variant="outline" type="button" onClick={async () => await signOut()}>
-          Sign out
-        </Button>
-        </div>
-      </div>
-    </header>
+    
       <div className="flex flex-col items-center h-screen pt-10 gap-10 w-full max-w-md mx-auto">
         
         <form onSubmit={(e) => e.preventDefault()} className="w-full max-w-md">
